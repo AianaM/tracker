@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -15,14 +16,16 @@ var envVars struct {
 	token string
 }
 
-func init() {
-	envVars.token = os.Getenv(tokenEnvName)
-	if envVars.token == "" {
-		askToken()
-	}
-}
-
 func getToken() string {
+	if envVars.token == "" {
+		if token := os.Getenv(tokenEnvName); token != "" {
+			envVars.token = token
+		} else if token := checkEnvFile(); token != "" {
+			envVars.token = token
+		} else {
+			askToken()
+		}
+	}
 	return envVars.token
 }
 
@@ -44,14 +47,11 @@ func askToken() {
 	switch input {
 	case "Y", "y":
 		saveToken(createToken())
-		break
 	case "W", "w":
 		saveToken(inputToken())
-		break
 	case "N", "n":
 		fmt.Println("=(")
 		os.Exit(0)
-		break
 	}
 }
 
@@ -87,4 +87,25 @@ func saveToken(value string) {
 	fmt.Println("Сохраняю токен: ", value)
 	envVars.token = value
 	os.Setenv(tokenEnvName, value)
+}
+
+func checkEnvFile() string {
+	file, err := os.Open(".env")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		re := regexp.MustCompile(tokenEnvName + `=(?P<value>.+)`)
+		matches := re.FindStringSubmatch(scanner.Text())
+		valueIndex := re.SubexpIndex("value")
+		if valueIndex > -1 && valueIndex < len(matches) {
+			return matches[valueIndex]
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "reading standard input:", err)
+	}
+	return ""
 }

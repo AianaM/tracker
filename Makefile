@@ -15,3 +15,5 @@ check:
 
 token-echo:
 	@echo ${YANDEX_IAM_TOKEN}
+token-save:
+	grep -q '^YANDEX_IAM_TOKEN=' .env && sed -i 's/^YANDEX_IAM_TOKEN=.*/YANDEX_IAM_TOKEN=${YANDEX_IAM_TOKEN}/' .env || echo "YANDEX_IAM_TOKEN=${YANDEX_IAM_TOKEN}" >> .env

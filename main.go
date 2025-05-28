@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-type Tracker interface {
-	getWeekWorklog()
-}
-
-var c cloud
-
 func init() {
 	c = makeClouds()
 
@@ -22,5 +16,5 @@ func init() {
 }
 
 func main() {
-	c.getWeekWorklog()
+	newWebClient()
 }

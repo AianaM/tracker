@@ -1,0 +1,4 @@
+github.com/AianaM/durationiso8601 v0.0.0-20250527184854-3d4ee4bfbc78 h1:VvgmGxHGsdelamtGwOmWJ/iBnhfGOpiWAiMD+fHAisk=
+github.com/AianaM/durationiso8601 v0.0.0-20250527184854-3d4ee4bfbc78/go.mod h1:LSdem9+qZ2EeWtvEcETIqNAZNl8djiu98xhBsP320Ak=
+github.com/AianaM/timefns v0.0.0-20250501001501-09b17c744f23 h1:Rzh28tGmtnr7Hc9ch67Q7giVa/sw2RjBvMaxAdMj8sg=
+github.com/AianaM/timefns v0.0.0-20250501001501-09b17c744f23/go.mod h1:G3JBgTPxKMIYnxGAwq/0bl83DZCm3C36bG55Qa5Ex6k=
