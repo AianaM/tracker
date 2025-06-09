@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/AianaM/timefns"
 )
@@ -85,9 +86,18 @@ func worklogHandler(w http.ResponseWriter, r *http.Request) {
 		fromIndex := worklogPath.SubexpIndex("from")
 		toIndex := worklogPath.SubexpIndex("to")
 		if fromIndex > -1 && fromIndex < len(worklogMatches) && toIndex > -1 && toIndex < len(worklogMatches) {
-			// TODO: Implement custom worklog handling
-			http.Error(w, "Custom date range not implemented", http.StatusNotImplemented)
-			return
+			if from, err := parseTimeSpan(worklogMatches[fromIndex], worklogMatches[toIndex]); err != nil {
+				log.Printf("Error parsing time span: %v", err)
+				http.Error(w, "Invalid date range", http.StatusBadRequest)
+				return
+			} else {
+				page, err = createWorklogPage(from, "Custom Worklog")
+				if err != nil {
+					log.Printf("Error creating worklog page: %v", err)
+					http.Error(w, "Internal server error", http.StatusInternalServerError)
+					return
+				}
+			}
 		} else {
 			http.NotFound(w, r)
 			log.Println("Invalid worklog path:", r.URL.Path)
@@ -128,6 +138,10 @@ func handlePresetWorklog(preset string) (Page[WorklogPageContent], error) {
 		return Page[WorklogPageContent]{}, fmt.Errorf("unknown preset: %s", preset)
 	}
 
+	return createWorklogPage(timespan, title)
+}
+
+func createWorklogPage(timespan timefns.TimeSpan, title string) (Page[WorklogPageContent], error) {
 	worklogs, err := c.getWorklog(timespan)
 	if err != nil {
 		return Page[WorklogPageContent]{}, fmt.Errorf("error getting worklogs: %w", err)
@@ -141,4 +155,16 @@ func handlePresetWorklog(preset string) (Page[WorklogPageContent], error) {
 			Worklogs: worklogs,
 		},
 	}, nil
+}
+
+func parseTimeSpan(start, end string) (timefns.TimeSpan, error) {
+	startDate, err := time.Parse(time.DateOnly, start)
+	if err != nil {
+		return timefns.TimeSpan{}, fmt.Errorf("error parsing start date: %w", err)
+	}
+	endDate, err := time.Parse(time.DateOnly, end)
+	if err != nil {
+		return timefns.TimeSpan{}, fmt.Errorf("error parsing end date: %w", err)
+	}
+	return timefns.TimeSpan{Start: startDate, End: endDate}, nil
 }
