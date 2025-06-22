@@ -34,7 +34,7 @@
 
         <tr>
             <th scope="row">issue-key</th>
-            <th scope="row">sum</th>
+            <th scope="row">{{.Worklogs.Sum}}</th>
             <th scope="row">comment</th>
             {{range .Worklogs.DaysSum}}
             <td>{{durationBeautify .}}</td>

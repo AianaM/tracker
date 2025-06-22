@@ -50,6 +50,7 @@ type TableData struct {
 	Days     []string
 	Rowspans map[string]Rowspan
 	DaysSum  []time.Duration
+	Sum      time.Duration
 }
 
 func (c cloud) getWorklog(ts timefns.TimeSpan) (TableData, error) {
@@ -83,6 +84,7 @@ func getWorklogsTable(ts timefns.TimeSpan, worklogs []worklog) TableData {
 	}
 	daysSums := make([]time.Duration, daysLen)
 	rowspans := map[string]Rowspan{}
+	sum := time.Duration(0)
 
 	for _, w := range worklogs {
 		date, err := timefns.Parse(w.Start)
@@ -115,6 +117,7 @@ func getWorklogsTable(ts timefns.TimeSpan, worklogs []worklog) TableData {
 			} else {
 				rowspan.Sum += duration
 				daysSums[i] += duration
+				sum += duration
 			}
 
 			rowspans[w.Issue.Key] = rowspan
@@ -122,7 +125,7 @@ func getWorklogsTable(ts timefns.TimeSpan, worklogs []worklog) TableData {
 		}
 	}
 
-	return TableData{days, rowspans, daysSums}
+	return TableData{days, rowspans, daysSums, sum}
 }
 
 func DurationBeautify(d time.Duration) string {
