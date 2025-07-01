@@ -2,6 +2,7 @@
 YANDEX_IAM_TOKEN := $(shell yc iam create-token)
 
 run: 
+	@make token-save
 	@go run .
 test:
 	@echo YANDEX_IAM_TOKEN=${YANDEX_IAM_TOKEN} YANDEX_ORG_ID=${YANDEX_ORG_ID}

@@ -11,15 +11,57 @@
 </head>
 
 <body>
-    <div>
+    <div class="header">
         <a href="worklog/today">Today</a>
         <a href="worklog/currentWeek">This Week</a>
         <a href="worklog/currentMonth">This Month</a>
-        <a href="worklog/from/2025-06-09/to/2025-06-12">Custom</a>
+        <div class="custom">
+            <span>Custom: </span>
+            <div>
+                <label for="start">start:</label>
+                <input type="date" id="start" name="start" />
+            </div>
+            <div>
+                <label for="end">end:</label>
+                <input type="date" id="end" name="end" />
+            </div>
+            <button type="button" onclick="onSubmit()">🆗</button>
+        </div>
     </div>
     <div>
         {{block "content" .Content}}This is the default body.{{end}}
     </div>
+    <script type="text/javascript">
+        function onSubmit() {
+            const start = document.getElementById("start").value;
+            const end = document.getElementById("end").value;
+            if (start && end) {
+                window.location.href = `worklog/from/${start}/to/${end}`;
+            } else {
+                alert("Please fill in both start and end dates.");
+            }
+        }
+        const dateToISOString = (date) => {
+            return date.toISOString().substring(0, 10);
+        }
+
+        const setInputValues = () => {
+            const req = /from\/([\d-]+)\/to\/([\d-]+)/;
+            const date = window.location.pathname.match(req);
+            if (!date || date.length < 3) {
+                const today = new Date();
+                const end = new Date(today.getTime() + (7 * 24 * 60 * 60 * 1000)); // Add one week to today
+                document.getElementById("start").value = dateToISOString(today);
+                document.getElementById("end").value = dateToISOString(end);
+                return;
+            }
+            const start = date[1];
+            const end = date[2];
+            document.getElementById("start").value = start;
+            document.getElementById("end").value = end;
+        }
+        setInputValues();
+    </script>
 </body>
 
 </html>

@@ -25,3 +25,8 @@ th[scope=col] {
 th[scope] {
   font-weight: 400;
 }
+
+.custom {
+  display: flex;
+  gap: 15px;
+}
