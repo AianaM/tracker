@@ -1,8 +1,10 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"regexp"
@@ -11,17 +13,21 @@ import (
 	"github.com/AianaM/timefns"
 )
 
+//go:embed templates/*
+var templatesFS embed.FS
+
+//go:embed templates/assets/*
+var assetsFS embed.FS
+
 const (
 	serverPort     = ":8080"
-	templatesDir   = "templates/"
-	assetsDir      = "templates/assets"
 	defaultWorklog = worklogPathPrefix + "/today"
 
 	worklogPathPrefix = "/worklog"
 
 	// Template files
-	indexTemplate   = "index.html"
-	worklogTemplate = "worklog.html"
+	indexTemplate   = "templates/index.html"
+	worklogTemplate = "templates/worklog.html"
 )
 
 type Page[T any] struct {
@@ -47,7 +53,14 @@ func newWebClient() {
 	}
 
 	log.Println("Starting server on", serverPort, "https://localhost"+serverPort)
-	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(assetsDir))))
+
+	// Обслуживаем статические файлы из встроенной файловой системы
+	assetsSubFS, err := fs.Sub(assetsFS, "templates/assets")
+	if err != nil {
+		log.Fatal("Error creating assets sub filesystem:", err)
+	}
+	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(assetsSubFS))))
+
 	http.HandleFunc("/", viewHandler)
 	http.HandleFunc(worklogPathPrefix+"/", worklogHandler)
 	log.Fatal(http.ListenAndServe(serverPort, nil))
@@ -106,9 +119,9 @@ func worklogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Rendering page: %s with timespan: %v - %v", page.Title, page.Content.Timespan.Start, page.Content.Timespan.End)
-	t, err := template.New(indexTemplate).Funcs(template.FuncMap{
+	t, err := template.New("index.html").Funcs(template.FuncMap{
 		"durationBeautify": DurationBeautify,
-	}).ParseFiles(templatesDir+indexTemplate, templatesDir+worklogTemplate)
+	}).ParseFS(templatesFS, indexTemplate, worklogTemplate)
 	if err != nil {
 		log.Printf("Template parsing error: %v", err)
 		http.Error(w, "Template error", http.StatusInternalServerError)

@@ -20,8 +20,6 @@ func getToken() string {
 	if envVars.token == "" {
 		if token := os.Getenv(tokenEnvName); token != "" {
 			envVars.token = token
-		} else if token := checkEnvFile(); token != "" {
-			envVars.token = token
 		} else {
 			askToken()
 		}
@@ -32,6 +30,8 @@ func getToken() string {
 func askToken() {
 	fmt.Println("Необходим IAM-токен для федеративного аккаунта")
 	fmt.Println("Если у вас еще нет интерфейса командной строки Yandex Cloud, установите и инициализируйте его. https://yandex.cloud/ru/docs/cli/quickstart#install")
+	fmt.Println("Затем выполните команду: yc init --federation-id=<federation_ID>")
+	fmt.Println("где <federation_ID> - идентификатор федеративного аккаунта, который вы можете найти в разделе 'Управление федерацией' в Yandex Cloud Console.")
 	fmt.Println("\n")
 	fmt.Println("Получите IAM-токен: yc iam create-token")
 	fmt.Println("Нажми Y, чтобы получить токен")
