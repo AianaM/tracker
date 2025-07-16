@@ -38,9 +38,9 @@ type user struct {
 	Display string `json:"display"`
 }
 type Rowspan struct {
-	IssueKey string
-	Rowspan  int
-	Rows     []struct {
+	Issue   issue
+	Rowspan int
+	Rows    []struct {
 		Comment  string
 		Duration []string
 	}
@@ -97,7 +97,7 @@ func getWorklogsTable(ts timefns.TimeSpan, worklogs []worklog) TableData {
 				continue
 			}
 			if _, ok := rowspans[w.Issue.Key]; !ok {
-				rowspans[w.Issue.Key] = Rowspan{w.Issue.Key, 0, []struct {
+				rowspans[w.Issue.Key] = Rowspan{w.Issue, 0, []struct {
 					Comment  string
 					Duration []string
 				}{}, time.Duration(0)}
@@ -146,4 +146,14 @@ func DurationBeautify(d time.Duration) string {
 	}
 
 	return strings.Join(parts, " ")
+}
+
+func TrackerUrl(issueKey string) string {
+	if trackerUrl == "" {
+		return ""
+	}
+	if strings.HasSuffix(trackerUrl, "/") {
+		return trackerUrl + issueKey
+	}
+	return trackerUrl + "/" + issueKey
 }

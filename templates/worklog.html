@@ -8,7 +8,7 @@
     </caption>
     <thead>
         <tr>
-            <th scope="col">issue-key</th>
+            <th scope="col">issue</th>
             <th scope="col">sum</th>
             <th scope="col">comment</th>
             {{range .Worklogs.Days}}
@@ -21,7 +21,7 @@
         {{range $index, $row := .Rows}}
         <tr>
             {{if eq $index 0}}
-            <th rowspan="{{$rowspan.Rowspan}}" scope="rowgroup">{{$rowspan.IssueKey}}</th>
+            <th rowspan="{{$rowspan.Rowspan}}" scope="rowgroup" class="issue"><a href="{{trackerUrl $rowspan.Issue.Key}}" target="_blank">{{$rowspan.Issue.Key}} {{$rowspan.Issue.Display}}</a></th>
             <th rowspan="{{$rowspan.Rowspan}}" scope="rowgroup">{{$rowspan.Sum}}</th>
             {{end}}
             <th scope="row">{{$row.Comment}}</th>

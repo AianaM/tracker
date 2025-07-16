@@ -121,6 +121,7 @@ func worklogHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Rendering page: %s with timespan: %v - %v", page.Title, page.Content.Timespan.Start, page.Content.Timespan.End)
 	t, err := template.New("index.html").Funcs(template.FuncMap{
 		"durationBeautify": DurationBeautify,
+		"trackerUrl":       TrackerUrl,
 	}).ParseFS(templatesFS, indexTemplate, worklogTemplate)
 	if err != nil {
 		log.Printf("Template parsing error: %v", err)

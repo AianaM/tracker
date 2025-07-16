@@ -30,3 +30,6 @@ th[scope] {
   display: flex;
   gap: 15px;
 }
+.issue {
+  text-align: left;
+}
