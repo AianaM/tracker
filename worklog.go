@@ -53,7 +53,9 @@ type TableData struct {
 	Sum      time.Duration
 }
 
-func (c cloud) getWorklog(ts timefns.TimeSpan) (TableData, error) {
+type worklogs []worklog
+
+func (c cloud) getWorklog(ts timefns.TimeSpan) (worklogs, error) {
 	log.Println("getWeekWorklog", ts.Start, ts.End)
 	request := newRequestData(
 		"https://api.tracker.yandex.net/v2/worklog",
@@ -67,13 +69,13 @@ func (c cloud) getWorklog(ts timefns.TimeSpan) (TableData, error) {
 	)
 	if err := request.get(); err != nil {
 		log.Fatal(err)
-		return TableData{}, err
+		return nil, err
 	}
 
-	return getWorklogsTable(ts, request.body), nil
+	return request.body, nil
 }
 
-func getWorklogsTable(ts timefns.TimeSpan, worklogs []worklog) TableData {
+func (w worklogs) getWorklogsTable(ts timefns.TimeSpan) TableData {
 	days := []string{}
 	for i := ts.Start; i.Before(ts.End); i = i.AddDate(0, 0, 1) {
 		days = append(days, i.Format(time.DateOnly))
@@ -86,7 +88,7 @@ func getWorklogsTable(ts timefns.TimeSpan, worklogs []worklog) TableData {
 	rowspans := map[string]Rowspan{}
 	sum := time.Duration(0)
 
-	for _, w := range worklogs {
+	for _, w := range w {
 		date, err := timefns.Parse(w.Start)
 		if err != nil {
 			log.Fatal(err)
@@ -110,7 +112,7 @@ func getWorklogsTable(ts timefns.TimeSpan, worklogs []worklog) TableData {
 				Comment  string
 				Duration []string
 			}{w.Comment, newRow})
-			if date, err := timefns.Parse(w.CreatedAt); err != nil {
+			if date, err := timefns.Parse(w.Start); err != nil {
 				log.Println("Error parsing date:", err)
 			} else if duration, err := durationiso8601.ParseDuration(date, w.Duration); err != nil {
 				log.Println("Error parsing duration:", err)
