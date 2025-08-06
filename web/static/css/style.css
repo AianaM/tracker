@@ -25,18 +25,3 @@ th[scope=col] {
 th[scope] {
   font-weight: 400;
 }
-
-.custom {
-  display: flex;
-  gap: 15px;
-}
-.issue {
-  text-align: left;
-}
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  background-color: #f0f0f0;
-}

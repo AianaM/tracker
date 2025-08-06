@@ -1,0 +1,86 @@
+{{define "content"}}
+<style type="text/css" scoped>
+    {{.Style}}
+</style>
+<div class="header">
+    <div class="worklog">
+        Load:
+        <div class="custom">
+            <span>Custom: </span>
+            <div>
+                <label for="worklog-start">start:</label>
+                <input type="date" id="worklog-start" name="worklog-start" />
+            </div>
+            <div>
+                <label for="worklog-end">end:</label>
+                <input type="date" id="worklog-end" name="worklog-end" />
+            </div>
+            <button type="button" onclick="onWorklogSubmit()">🆗</button>
+        </div>
+    </div>
+    <div class="show">
+        Show:
+        <div class="custom">
+            <span>Custom: </span>
+            <div>
+                <label for="show-start">start:</label>
+                <input type="date" id="show-start" name="show-start" />
+            </div>
+            <div>
+                <label for="show-end">end:</label>
+                <input type="date" id="show-end" name="show-end" />
+            </div>
+            <button type="button" onclick="onShowSubmit()">🆗</button>
+        </div>
+    </div>
+</div>
+<h1>Worklog</h1>
+
+{{if .Worklogs}}
+<table>
+    <caption>
+        <h4>{{.Title}}: {{.Timespan.Start}} - {{.Timespan.End}}</h4>
+    </caption>
+    <thead>
+        <tr>
+            <th scope="col">issue</th>
+            <th scope="col">sum</th>
+            <th scope="col">comment</th>
+            {{range .Worklogs.Days}}
+            <th scope="col">{{.}}</th>
+            {{end}}
+        </tr>
+    </thead>
+    <tbody>
+        {{range $rowspanIndex, $rowspan := .Worklogs.Rowspans}}
+        {{range $index, $row := .Rows}}
+        <tr>
+            {{if eq $index 0}}
+            <th rowspan="{{$rowspan.Rowspan}}" scope="rowgroup" class="issue"><a
+                    href="{{trackerUrl $rowspan.Issue.Key}}" target="_blank">{{$rowspan.Issue.Key}}
+                    {{$rowspan.Issue.Display}}</a></th>
+            <th rowspan="{{$rowspan.Rowspan}}" scope="rowgroup">{{$rowspan.Sum}}</th>
+            {{end}}
+            <th scope="row">{{$row.Comment}}</th>
+            {{range $row.Duration}}
+            <td>{{.}}</td>
+            {{end}}
+        </tr>
+        {{end}}
+        {{end}}
+
+        <tr>
+            <th scope="row">issue-key</th>
+            <th scope="row">{{.Worklogs.Sum}}</th>
+            <th scope="row">comment</th>
+            {{range .Worklogs.DaysSum}}
+            <td>{{durationBeautify .}}</td>
+            {{end}}
+        </tr>
+    </tbody>
+</table>
+{{else}}
+<div>No data</div>
+{{end}}
+<script src="/worklog/js/index.js"></script>
+{{end}}

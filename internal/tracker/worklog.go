@@ -1,6 +1,7 @@
 package tracker
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/AianaM/timefns"
@@ -33,31 +34,13 @@ type User struct {
 	Id      string `json:"id"`
 	Display string `json:"display"`
 }
-type Rowspan struct {
-	Issue   Issue
-	Rowspan int
-	Rows    []struct {
-		Comment  string
-		Duration []string
-	}
-	Sum time.Duration
-}
-type TableData struct {
-	Days     []string
-	Rowspans map[string]Rowspan
-	DaysSum  []time.Duration
-	Sum      time.Duration
-}
 
-type worklogs []Worklog
-
-var Path = "worklog/"
-
-func GetWorklog(createdBy string, createdAt timefns.TimeSpan) (worklogs, error) {
-	return RequestData[worklogs]{
-		Request: Request{
-			Path:   Path,
-			Method: "GET",
+func (t *TrackerClient) GetWorklog(createdBy string, createdAt timefns.TimeSpan) ([]Worklog, error) {
+	return requestData[[]Worklog]{
+		client: t,
+		request: request{
+			path:   "worklog/",
+			method: http.MethodGet,
 			params: []keyValue{
 				{"createdBy", createdBy},
 				{"createdAt", "from:" + createdAt.Start.Format(time.RFC3339Nano)},

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	clientpkg "example.com/tracker/client"
+	client "example.com/tracker/internal/client"
 )
 
 func TestRequestNew(t *testing.T) {
@@ -116,9 +116,11 @@ func TestRequestNew(t *testing.T) {
 		},
 	}
 
+	httpClient := client.New(nil)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := clientpkg.RequestNew(tt.args.ctx, tt.args.httpMethod, tt.args.url, tt.args.body)
+			got, err := httpClient.NewRequest(tt.args.ctx, tt.args.httpMethod, tt.args.url, tt.args.body)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RequestNew() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -185,14 +187,16 @@ func TestExecRequest(t *testing.T) {
 		},
 	}
 
+	httpClient := client.New(nil)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", server.URL+tt.path, nil)
+			req, err := http.NewRequest(http.MethodGet, server.URL+tt.path, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			gotStatus, err := clientpkg.ExecRequest(req, tt.bodyInterface)
+			gotStatus, err := httpClient.Do(req, tt.bodyInterface)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExecRequest() error = %v, wantErr %v", err, tt.wantErr)

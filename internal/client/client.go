@@ -9,17 +9,20 @@ import (
 	"time"
 )
 
-var client http.Client
-
-func New(interceptors []Interceptor) {
-	client = http.Client{
-		Timeout:   time.Second * 10,
-		Transport: NewInterceptorChain(interceptors),
-	}
-
+type Client struct {
+	httpClient *http.Client
 }
 
-func RequestNew(ctx context.Context, httpMethod, url string, body io.Reader) (*http.Request, error) {
+func New(interceptors []Interceptor) *Client {
+	return &Client{
+		httpClient: &http.Client{
+			Timeout:   time.Second * 10,
+			Transport: NewInterceptorChain(interceptors),
+		},
+	}
+}
+
+func (c *Client) NewRequest(ctx context.Context, httpMethod, url string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, httpMethod, url, body)
 	if err != nil {
 		fmt.Println("Error creating request:", err)
@@ -31,8 +34,8 @@ func RequestNew(ctx context.Context, httpMethod, url string, body io.Reader) (*h
 	return req, nil
 }
 
-func ExecRequest(request *http.Request, bodyInterface interface{}) (status int, err error) {
-	resp, err := client.Do(request)
+func (c *Client) Do(request *http.Request, bodyInterface interface{}) (status int, err error) {
+	resp, err := c.httpClient.Do(request)
 	if err != nil {
 		return 0, fmt.Errorf("error making request to %s: %w", request.URL.Path, err)
 	}

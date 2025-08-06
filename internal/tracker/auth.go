@@ -3,13 +3,16 @@ package tracker
 import (
 	"net/http"
 
-	"example.com/tracker/client"
+	"example.com/tracker/internal/client"
 )
 
 // Интерсептор для добавления токена
-func AuthTokenInterceptor(headers map[string]string) client.Interceptor {
+func AuthTokenInterceptor(token, orgId string) client.Interceptor {
 	return func(next http.RoundTripper) http.RoundTripper {
-		return &authRoundTripper{next: next, headers: headers}
+		return &authRoundTripper{next: next, headers: map[string]string{
+			"Authorization":  "Bearer " + token,
+			"X-Cloud-Org-ID": orgId,
+		}}
 	}
 }
 
