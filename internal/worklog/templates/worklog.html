@@ -2,6 +2,21 @@
 <style type="text/css" scoped>
     {{.Style}}
 </style>
+<script>
+    var query = {
+        createdBy: "{{.Query.CreatedBy}}",
+        createdAt: {
+            preset: "{{.Query.CreatedAt.Title}}",
+            from: new Date("{{.Query.CreatedAt.Timespan.Start | html}}"),
+            to: new Date("{{.Query.CreatedAt.Timespan.End | html}}")
+        },
+        show: {
+            preset: "{{.Query.Show.Title}}",
+            from: new Date("{{.Query.Show.Timespan.Start | html}}"),
+            to: new Date("{{.Query.Show.Timespan.End | html}}")
+        }
+    };
+</script>
 <div class="header">
     <div class="worklog">
         Load:
@@ -39,7 +54,8 @@
 {{if .Worklogs}}
 <table>
     <caption>
-        <h4>{{.Title}}: {{.Timespan.Start}} - {{.Timespan.End}}</h4>
+        <h4>CreatedBy: {{.Query.CreatedBy}}: CreatedAt: {{.Query.CreatedAt.Timespan.Start}} -
+            {{.Query.CreatedAt.Timespan.End}}, Show: {{.Query.Show.Timespan.Start}} - {{.Query.Show.Timespan.End}}</h4>
     </caption>
     <thead>
         <tr>

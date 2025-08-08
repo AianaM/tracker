@@ -82,10 +82,10 @@ func (w Worklogs) asTable(show timefns.TimeSpan) (TableData, error) {
 	return TableData{days, rowspans, daysSums, sum}, nil
 }
 
-func (h *Handler) getWorklogsTable(createdBy string, timespan, show titledTimeSpan) (TableData, error) {
-	worklogs, err := h.trackerClient.GetWorklog(createdBy, timespan.timespan)
+func (h *Handler) getWorklogsTable(createdBy string, timespan, show titledTimeSpan[time.Time]) (TableData, error) {
+	worklogs, err := h.trackerClient.GetWorklog(createdBy, timespan.Timespan)
 	if err != nil {
 		return TableData{}, fmt.Errorf("error getting worklogs: %w", err)
 	}
-	return Worklogs(worklogs).asTable(show.timespan)
+	return Worklogs(worklogs).asTable(show.Timespan)
 }

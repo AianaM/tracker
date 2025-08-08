@@ -38,17 +38,19 @@ type Handler struct {
 	trackerClient *tracker.TrackerClient
 	templates     templateConfig
 }
-
+type Preset string
 type timespanParams struct {
 	Preset string
 	From   string
 	To     string
 }
+type PathParams struct {
+	Worklog   timespanParams
+	Show      timespanParams
+	CreatedBy string
+}
 
-var pathParams = struct {
-	Worklog timespanParams
-	Show    timespanParams
-}{
+var pathParams = PathParams{
 	Worklog: timespanParams{
 		Preset: "worklogPreset",
 		From:   "worklogFrom",
@@ -59,16 +61,22 @@ var pathParams = struct {
 		From:   "showFrom",
 		To:     "showTo",
 	},
+	CreatedBy: "createdBy",
 }
 
-type titledTimeSpan struct {
-	title    string
-	timespan timefns.TimeSpan
-}
-
-type PageWorklogContent struct {
+type titledTimeSpan[T any] struct {
 	Title    string
-	Timespan timefns.TimeSpan
+	Timespan struct {
+		Start T
+		End   T
+	}
+}
+type Query[T any] struct {
+	CreatedBy       string
+	CreatedAt, Show titledTimeSpan[T]
+}
+type PageWorklogContent struct {
+	Query    Query[string]
 	Worklogs TableData
 	Style    template.CSS
 }
@@ -103,12 +111,12 @@ func NewHandler(trackerClient *tracker.TrackerClient, indexTpl *template.Templat
 }
 
 func (h *Handler) SetupRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET "+pathPrefix+"/{"+pathParams.Worklog.Preset+"}", h.worklogHandler)
-	mux.HandleFunc("GET "+pathPrefix+"/{"+pathParams.Worklog.Preset+"}/show/{"+pathParams.Show.Preset+"}", h.worklogShowHandler)
-	mux.HandleFunc("GET "+pathPrefix+"/{"+pathParams.Worklog.Preset+"}/show/from/{"+pathParams.Show.From+"}/to/{"+pathParams.Show.To+"}", h.worklogShowHandler)
-	mux.HandleFunc("GET "+pathPrefix+"/from/{"+pathParams.Worklog.From+"}/to/{"+pathParams.Worklog.To+"}", h.worklogHandler)
-	mux.HandleFunc("GET "+pathPrefix+"/from/{"+pathParams.Worklog.From+"}/to/{"+pathParams.Worklog.To+"}/show/{"+pathParams.Show.Preset+"}", h.worklogShowHandler)
-	mux.HandleFunc("GET "+pathPrefix+"/from/{"+pathParams.Worklog.From+"}/to/{"+pathParams.Worklog.To+"}/show/from/{"+pathParams.Show.From+"}/to/{"+pathParams.Show.To+"}", h.worklogShowHandler)
+	mux.HandleFunc("GET "+pathPrefix+"/{"+pathParams.CreatedBy+"}/{"+pathParams.Worklog.Preset+"}", h.worklogHandler44(worklogQuery))
+	mux.HandleFunc("GET "+pathPrefix+"/{"+pathParams.CreatedBy+"}/{"+pathParams.Worklog.Preset+"}/show/{"+pathParams.Show.Preset+"}", h.worklogHandler44(worklogShowQuery))
+	mux.HandleFunc("GET "+pathPrefix+"/{"+pathParams.CreatedBy+"}/{"+pathParams.Worklog.Preset+"}/show/from/{"+pathParams.Show.From+"}/to/{"+pathParams.Show.To+"}", h.worklogHandler44(worklogShowQuery))
+	mux.HandleFunc("GET "+pathPrefix+"/{"+pathParams.CreatedBy+"}/from/{"+pathParams.Worklog.From+"}/to/{"+pathParams.Worklog.To+"}", h.worklogHandler44(worklogQuery))
+	mux.HandleFunc("GET "+pathPrefix+"/{"+pathParams.CreatedBy+"}/from/{"+pathParams.Worklog.From+"}/to/{"+pathParams.Worklog.To+"}/show/{"+pathParams.Show.Preset+"}", h.worklogHandler44(worklogShowQuery))
+	mux.HandleFunc("GET "+pathPrefix+"/{"+pathParams.CreatedBy+"}/from/{"+pathParams.Worklog.From+"}/to/{"+pathParams.Worklog.To+"}/show/from/{"+pathParams.Show.From+"}/to/{"+pathParams.Show.To+"}", h.worklogHandler44(worklogShowQuery))
 }
 
 func (h *Handler) HandleStatic(mux *http.ServeMux) {
@@ -116,42 +124,83 @@ func (h *Handler) HandleStatic(mux *http.ServeMux) {
 	if err != nil {
 		log.Fatal("Error creating assets sub filesystem:", err)
 	}
-	mux.Handle("/"+name+"/", http.StripPrefix("/"+name+"/", http.FileServer(http.FS(assetsSubFS))))
+	mux.Handle("GET /"+name+"/js/{fileName}", http.StripPrefix("/"+name+"/", http.FileServer(http.FS(assetsSubFS))))
 }
 
-func (h *Handler) worklogHandler(w http.ResponseWriter, r *http.Request) {
-	worklog, err := pathParams.Worklog.parse(r)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error parsing worklog parameters: %v", err), http.StatusBadRequest)
-		return
+func activatedRoute(r *http.Request) *PathParams {
+	return &PathParams{
+		CreatedBy: r.PathValue(pathParams.CreatedBy),
+		Worklog: timespanParams{
+			Preset: r.PathValue(pathParams.Worklog.Preset),
+			From:   r.PathValue(pathParams.Worklog.From),
+			To:     r.PathValue(pathParams.Worklog.To),
+		},
+		Show: timespanParams{
+			Preset: r.PathValue(pathParams.Show.Preset),
+			From:   r.PathValue(pathParams.Show.From),
+			To:     r.PathValue(pathParams.Show.To),
+		},
 	}
-	h.render(worklog, worklog, w)
+}
+func worklogQuery(p PathParams) (*Query[time.Time], error) {
+	if p.CreatedBy == "" {
+		return nil, fmt.Errorf("Error parsing CreatedBy parameter")
+	}
+	createdAt, err := p.Worklog.parse()
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing worklog parameters: %v", err)
+	}
+	return &Query[time.Time]{
+		CreatedBy: p.CreatedBy,
+		CreatedAt: createdAt,
+		Show:      createdAt,
+	}, nil
 }
 
-func (h *Handler) worklogShowHandler(w http.ResponseWriter, r *http.Request) {
-	worklog, err := pathParams.Worklog.parse(r)
+func worklogShowQuery(p PathParams) (*Query[time.Time], error) {
+	q, err := worklogQuery(p)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error parsing worklog parameters: %v", err), http.StatusBadRequest)
-		return
+		return nil, fmt.Errorf("Error creating worklog query: %v", err)
 	}
-	show, err := pathParams.Show.parse(r)
+	show, err := p.Show.parse()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error parsing show parameters: %v", err), http.StatusBadRequest)
-		return
+		return nil, fmt.Errorf("Error parsing show parameters: %v", err)
 	}
-	h.render(worklog, show, w)
+	q.Show = show
+	return q, nil
 }
 
-func parsePresetTimespan(preset string) (titledTimeSpan, error) {
-	switch preset {
+func (h *Handler) worklogHandler44(queryFn func(p PathParams) (*Query[time.Time], error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		activatedRoute := activatedRoute(r)
+		q, err := queryFn(*activatedRoute)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error creating worklog query: %v", err), http.StatusInternalServerError)
+			return
+		}
+		page, err := h.createWorklogPage(*q)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error creating worklog page: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := h.templates.tpl.ExecuteTemplate(w, "index.html", page); err != nil {
+			http.Error(w, fmt.Sprintf("Template execution error: %v", err), 500)
+		}
+	}
+}
+
+func (p Preset) parsePresetTimespan() (titledTimeSpan[time.Time], error) {
+	switch p {
 	case "today":
-		return titledTimeSpan{"Сегодня", timefns.Today()}, nil
+		return titledTimeSpan[time.Time]{"Сегодня", timefns.Today()}, nil
 	case "currentWeek":
-		return titledTimeSpan{"Текущая неделя", timefns.CurrentWeek()}, nil
+		return titledTimeSpan[time.Time]{"Текущая неделя", timefns.CurrentWeek()}, nil
 	case "currentMonth":
-		return titledTimeSpan{"Текущий месяц", timefns.CurrentMonth()}, nil
+		return titledTimeSpan[time.Time]{"Текущий месяц", timefns.CurrentMonth()}, nil
 	default:
-		return titledTimeSpan{}, fmt.Errorf("unknown preset: %s", preset)
+		return titledTimeSpan[time.Time]{}, fmt.Errorf("unknown preset: %s", p)
 	}
 }
 
@@ -166,56 +215,52 @@ func parseTimeSpan(start, end string) (timefns.TimeSpan, error) {
 	}
 	return timefns.TimeSpan{Start: startDate, End: endDate}, nil
 }
-
-func (t timespanParams) parse(r *http.Request) (titledTimeSpan, error) {
-	if preset := r.PathValue(t.Preset); preset != "" {
-		worklog, err := parsePresetTimespan(preset)
-		if err != nil {
-			return titledTimeSpan{}, fmt.Errorf("error handling preset %v: %v", t.Preset, err)
+func (t timespanParams) parse() (titledTimeSpan[time.Time], error) {
+	if t.Preset != "" {
+		if worklog, err := Preset(t.Preset).parsePresetTimespan(); err != nil {
+			return titledTimeSpan[time.Time]{}, fmt.Errorf("error parsing preset %v: %v", t, err)
+		} else {
+			return worklog, nil
 		}
-		return worklog, nil
-	} else if from, to := r.PathValue(t.From), r.PathValue(t.To); from != "" && to != "" {
-		worklog, err := parseTimeSpan(r.PathValue(t.From), r.PathValue(t.To))
-		if err != nil {
-			return titledTimeSpan{}, fmt.Errorf("error handling custom %v, %v: %v", t.From, t.To, err)
+	} else if t.From != "" && t.To != "" {
+		if worklog, err := parseTimeSpan(t.From, t.To); err != nil {
+			return titledTimeSpan[time.Time]{}, fmt.Errorf("error parsing custom %v: %v", t, err)
+		} else {
+			return titledTimeSpan[time.Time]{"Кастомный", worklog}, nil
 		}
-		return titledTimeSpan{"Кастомный", worklog}, nil
-	} else {
-		return titledTimeSpan{}, fmt.Errorf("invalid worklog path: %v", r.URL.Path)
 	}
+	return titledTimeSpan[time.Time]{}, fmt.Errorf("error parsing worklog path: %v", t)
 }
 
-func (h *Handler) render(worklog, show titledTimeSpan, w http.ResponseWriter) {
-	page, err := h.createWorklogPage(worklog, show)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error creating worklog page: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.templates.tpl.ExecuteTemplate(w, "index.html", page); err != nil {
-		http.Error(w, fmt.Sprintf("Template execution error: %v", err), 500)
-	}
-}
-
-func (h *Handler) createWorklogPage(timespan, show titledTimeSpan) (PageWorklog, error) {
-	createdBy := os.Getenv("LOGIN") // TODO: params
-	worklogsTable, err := h.getWorklogsTable(createdBy, timespan, show)
+func (h *Handler) createWorklogPage(q Query[time.Time]) (PageWorklog, error) {
+	worklogsTable, err := h.getWorklogsTable(q.CreatedBy, q.CreatedAt, q.Show)
 	if err != nil {
 		return PageWorklog{}, fmt.Errorf("error getting worklogs: %w", err)
 	}
+	log.Println(q.CreatedAt.Timespan.Start.Format(timefns.ISO8601n))
 
 	return PageWorklog{
-		Title: show.title,
+		Title: "Worklog: " + q.Show.Title,
 		Content: PageWorklogContent{
-			Title:    show.title,
-			Timespan: show.timespan,
+			Query: Query[string]{
+				CreatedBy: q.CreatedBy,
+				CreatedAt: titledTimeSpan[string]{
+					Title: q.CreatedAt.Title,
+					Timespan: struct {
+						Start string
+						End   string
+					}{Start: q.CreatedAt.Timespan.Start.Format(time.DateOnly), End: q.CreatedAt.Timespan.End.Format(time.DateOnly)}},
+				Show: titledTimeSpan[string]{
+					Title: q.Show.Title,
+					Timespan: struct {
+						Start string
+						End   string
+					}{Start: q.Show.Timespan.Start.Format(time.DateOnly), End: q.Show.Timespan.End.Format(time.DateOnly)}},
+			},
 			Worklogs: worklogsTable,
 			Style:    h.templates.css,
-		},
-	}, nil
+		}}, nil
 }
-
 func DurationBeautify(d time.Duration) string {
 	h := int(d / time.Hour)
 	m := int((d % time.Hour) / time.Minute)
